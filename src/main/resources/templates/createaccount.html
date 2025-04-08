@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thêm mới tài khoản</title>
+  <title>Create New Account</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <style>
     body {
@@ -98,60 +98,60 @@
 </head>
 <body>
 <div class="container">
-  <h2>Thêm mới tài khoản</h2>
+  <h2>Create New Account</h2>
   <div id="errorAlert" class="error-message"></div>
   <form id="createAccountForm">
     <div class="form-group">
       <label for="username">Username:</label>
       <div class="input-group">
-        <input id="username" type="text" placeholder="Nhập username" required>
-        <button type="button" onclick="checkUsername()" class="btn-primary">Kiểm tra</button>
+        <input id="username" type="text" placeholder="Enter username" required>
+        <button type="button" onclick="checkUsername()" class="btn-primary">Check</button>
       </div>
       <span id="usernameMessage" class="message"></span>
     </div>
 
     <div class="form-group">
-      <label for="employeeName">Tên nhân viên:</label>
-      <input id="employeeName" type="text" placeholder="Nhập tên nhân viên" required>
+      <label for="employeeName">Employee Name:</label>
+      <input id="employeeName" type="text" placeholder="Enter employee name" required>
     </div>
 
     <div class="form-group">
       <label for="email">Email:</label>
-      <input id="email" type="email" placeholder="Nhập email" readonly>
+      <input id="email" type="email" placeholder="Email" readonly>
     </div>
 
     <div class="form-group">
-      <label for="department">Đơn vị:</label>
+      <label for="department">Department:</label>
       <select id="department" required>
-        <option value="">Chọn đơn vị</option>
+        <option value="">Select department</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label for="role">Quyền:</label>
+      <label for="role">Role:</label>
       <select id="role" required>
-        <option value="">Chọn quyền</option>
+        <option value="">Select role</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label for="password">Mật khẩu:</label>
-      <input id="password" type="password" placeholder="Nhập mật khẩu" minlength="6" required>
-      <small class="message">(Tối thiểu 6 ký tự)</small>
+      <label for="password">Password:</label>
+      <input id="password" type="password" placeholder="Enter password" minlength="6" required>
+      <small class="message">(Minimum 6 characters)</small>
     </div>
 
     <div class="form-group">
       <label>
-        <input type="checkbox" id="status" checked> Tài khoản hoạt động
+        <input type="checkbox" id="status" checked> Active account
       </label>
     </div>
 
     <div class="form-footer">
       <button type="button" onclick="window.location.href='/users'" class="btn-secondary">
-        <i class="fas fa-times"></i> Hủy
+        <i class="fas fa-times"></i> Cancel
       </button>
       <button type="submit" class="btn-primary">
-        <i class="fas fa-save"></i> Lưu
+        <i class="fas fa-save"></i> Save
       </button>
     </div>
   </form>
@@ -159,29 +159,22 @@
 
 <script>
   let isUsernameAvailable = false;
-  let departmentsList = []; // Lưu danh sách đơn vị để tái sử dụng
+  let departmentsList = [];
 
-  // 🔹 Lấy danh sách đơn vị từ API
   async function fetchDepartments() {
     try {
       const response = await fetch('/api/v1/departments');
       const result = await response.json();
 
-      // Lọc các đơn vị trùng lặp bằng cách sử dụng Set
       departmentsList = Array.isArray(result.data)
-              ? [...new Map(result.data.map(item =>
-                      [item.departmentName, item])).values()]
+              ? [...new Map(result.data.map(item => [item.departmentName, item])).values()]
               : [];
 
-      // Sắp xếp các đơn vị theo thứ tự A-Z
-      departmentsList.sort((a, b) =>
-              a.departmentName.localeCompare(b.departmentName)
-      );
+      departmentsList.sort((a, b) => a.departmentName.localeCompare(b.departmentName));
 
       const departmentSelect = document.getElementById('department');
-      departmentSelect.innerHTML = '<option value="">Chọn đơn vị</option>';
+      departmentSelect.innerHTML = '<option value="">Select department</option>';
 
-      // Thêm các đơn vị đã lọc vào dropdown
       departmentsList.forEach(dept => {
         const option = document.createElement('option');
         option.value = dept.departmentName;
@@ -190,12 +183,11 @@
       });
 
     } catch (error) {
-      console.error('🚨 Lỗi khi lấy danh sách đơn vị:', error);
-      showError('Không thể tải danh sách đơn vị. Vui lòng thử lại sau.');
+      console.error('🚨 Failed to load departments:', error);
+      showError('Unable to load departments. Please try again later.');
     }
   }
 
-  // 🔹 Lấy danh sách quyền từ API
   async function fetchRoles() {
     try {
       const response = await fetch('/api/v1/roles/all');
@@ -203,7 +195,7 @@
       const roles = Array.isArray(result.data) ? result.data : [];
 
       const roleSelect = document.getElementById('role');
-      roleSelect.innerHTML = '<option value="">Chọn quyền</option>';
+      roleSelect.innerHTML = '<option value="">Select role</option>';
       roles.forEach(role => {
         const option = document.createElement('option');
         option.value = role.roleName;
@@ -212,27 +204,25 @@
       });
 
     } catch (error) {
-      console.error('🚨 Lỗi khi lấy danh sách quyền:', error);
-      showError('Không thể tải danh sách quyền. Vui lòng thử lại sau.');
+      console.error('🚨 Failed to load roles:', error);
+      showError('Unable to load roles. Please try again later.');
     }
   }
 
-  // 🔹 Kiểm tra username có sẵn không
   async function checkUsername() {
     const username = document.getElementById('username').value.trim();
     const messageSpan = document.getElementById('usernameMessage');
     messageSpan.textContent = '';
 
     if (!username) {
-      messageSpan.textContent = 'Vui lòng nhập username';
+      messageSpan.textContent = 'Please enter a username';
       messageSpan.className = 'message text-danger';
       isUsernameAvailable = false;
       return;
     }
 
-    // Kiểm tra định dạng username
     if (!/^[a-z0-9_]+$/i.test(username)) {
-      messageSpan.textContent = 'Username chỉ được chứa chữ cái, số và dấu gạch dưới';
+      messageSpan.textContent = 'Username can only contain letters, numbers, and underscores';
       messageSpan.className = 'message text-danger';
       isUsernameAvailable = false;
       return;
@@ -242,30 +232,29 @@
       const response = await fetch(`/api/v1/users/check?username=${username}`);
 
       if (!response.ok) {
-        throw new Error('Lỗi kết nối máy chủ');
+        throw new Error('Server error');
       }
 
       const result = await response.json();
 
       if (result.status === 'Success') {
-        messageSpan.textContent = 'Username khả dụng';
+        messageSpan.textContent = 'Username is available';
         messageSpan.className = 'message text-success';
         isUsernameAvailable = true;
         updateEmail();
       } else {
-        messageSpan.textContent = result.message || 'Username không khả dụng';
+        messageSpan.textContent = result.message || 'Username is not available';
         messageSpan.className = 'message text-danger';
         isUsernameAvailable = false;
       }
     } catch (error) {
-      messageSpan.textContent = 'Có lỗi xảy ra khi kiểm tra username';
+      messageSpan.textContent = 'Error checking username';
       messageSpan.className = 'message text-danger';
       isUsernameAvailable = false;
-      console.error('🚨 Lỗi khi kiểm tra username:', error);
+      console.error('🚨 Username check error:', error);
     }
   }
 
-  // 🔹 Hiển thị thông báo lỗi
   function showError(message) {
     const errorAlert = document.getElementById('errorAlert');
     errorAlert.textContent = message;
@@ -273,14 +262,12 @@
     setTimeout(() => errorAlert.style.display = 'none', 5000);
   }
 
-  // 🔹 Lấy departmentId từ departmentName
   function getDepartmentId(departmentName) {
     if (!departmentName) return null;
     const department = departmentsList.find(d => d.departmentName === departmentName);
     return department ? department.departmentId : null;
   }
 
-  // 🔹 Cập nhật email tự động
   function updateEmail() {
     const username = document.getElementById('username').value.trim();
     const emailField = document.getElementById('email');
@@ -292,26 +279,22 @@
     }
   }
 
-  // 🔹 Tạo tài khoản mới
   async function createAccount(event) {
     event.preventDefault();
     const errorAlert = document.getElementById('errorAlert');
     errorAlert.style.display = 'none';
 
-    // Kiểm tra username
     if (!isUsernameAvailable) {
-      showError('Vui lòng kiểm tra và xác nhận username khả dụng trước khi tạo tài khoản');
+      showError('Please check and confirm username availability before creating account');
       return;
     }
 
-    // Kiểm tra mật khẩu
     const password = document.getElementById('password').value;
     if (password.length < 6) {
-      showError('Mật khẩu phải có ít nhất 6 ký tự');
+      showError('Password must be at least 6 characters');
       return;
     }
 
-    // Thu thập dữ liệu form
     const accountData = {
       username: document.getElementById('username').value.trim(),
       employeeName: document.getElementById('employeeName').value.trim(),
@@ -323,9 +306,8 @@
       status: document.getElementById('status').checked ? 'Active' : 'Inactive'
     };
 
-    // Kiểm tra các trường bắt buộc
     if (!accountData.departmentName || !accountData.roleName) {
-      showError('Vui lòng chọn đơn vị và quyền');
+      showError('Please select department and role');
       return;
     }
 
@@ -341,30 +323,25 @@
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || 'Không thể tạo tài khoản');
+        throw new Error(result.message || 'Account creation failed');
       }
 
       if (result.status === 'Success') {
-        alert('Tạo tài khoản thành công!');
+        alert('Account created successfully!');
         window.location.href = '/users?refresh=' + new Date().getTime();
       } else {
-        showError(result.message || 'Có lỗi xảy ra khi tạo tài khoản');
+        showError(result.message || 'Failed to create account');
       }
     } catch (error) {
-      console.error('🚨 Lỗi khi tạo tài khoản:', error);
-      showError(error.message || 'Có lỗi xảy ra khi tạo tài khoản');
+      console.error('🚨 Account creation error:', error);
+      showError(error.message || 'Failed to create account');
     }
   }
 
-  // 🔹 Khởi tạo khi trang được tải
   document.addEventListener('DOMContentLoaded', () => {
     fetchDepartments();
     fetchRoles();
-
-    // Thêm sự kiện input cho username để tự động cập nhật email
     document.getElementById('username').addEventListener('input', updateEmail);
-
-    // Thêm sự kiện submit cho form
     document.getElementById('createAccountForm').addEventListener('submit', createAccount);
   });
 </script>

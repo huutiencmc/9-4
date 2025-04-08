@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quản lý tài khoản</title>
+  <title>Account Management</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <style>
     body {
@@ -63,27 +63,27 @@
 </head>
 <body>
 <div class="container">
-  <h2>Quản lý tài khoản</h2>
+  <h2>Account Management</h2>
   <div id="errorAlert" class="error-message"></div>
   <div class="toolbar">
     <select id="department"></select>
     <select id="role"></select>
-    <input type="text" id="keyword" placeholder="Nhập username...">
+    <input type="text" id="keyword" placeholder="Enter username...">
     <button onclick="searchAccount()">
-      <i class="fas fa-search"></i> Tìm kiếm
+      <i class="fas fa-search"></i> Search
     </button>
-    <button id="addButton" onclick="window.location.href='/users/create'"><i class="fas fa-plus"></i> Thêm mới</button>
+    <button id="addButton" onclick="window.location.href='/users/create'"><i class="fas fa-plus"></i> Add New</button>
   </div>
   <table>
     <thead>
     <tr>
       <th>Username</th>
-      <th>Tên nhân viên</th>
+      <th>Employee Name</th>
       <th>Email</th>
       <th>Role</th>
-      <th>Đơn vị</th>
-      <th>Tình trạng</th>
-      <th>Chỉnh sửa</th>
+      <th>Department</th>
+      <th>Status</th>
+      <th>Actions</th>
     </tr>
     </thead>
     <tbody id="accountsTableBody"></tbody>
@@ -93,7 +93,7 @@
 <script>
   let allUsers = [];
   let departmentsList = [];
-  let currentUserRole = ''; // 🔹 Lưu vai trò người dùng
+  let currentUserRole = '';
 
   function showError(message) {
     const errorAlert = document.getElementById('errorAlert');
@@ -105,7 +105,7 @@
   async function fetchData() {
     try {
       const response = await fetch('/api/v1/users/all');
-      if (!response.ok) throw new Error('Lỗi khi tải dữ liệu người dùng');
+      if (!response.ok) throw new Error('Error fetching user data');
 
       const result = await response.json();
       if (Array.isArray(result.data)) {
@@ -119,18 +119,18 @@
         filterData();
       } else {
         allUsers = [];
-        showError('Dữ liệu người dùng không hợp lệ');
+        showError('Invalid user data');
       }
     } catch (error) {
-      console.error('🚨 Lỗi khi lấy dữ liệu:', error);
-      showError('Không thể tải danh sách người dùng');
+      console.error('Error fetching data:', error);
+      showError('Failed to load user list');
     }
   }
 
   async function fetchDepartments() {
     try {
       const response = await fetch('/api/v1/departments');
-      if (!response.ok) throw new Error('Lỗi khi tải danh sách đơn vị');
+      if (!response.ok) throw new Error('Error fetching departments');
 
       const result = await response.json();
       departmentsList = Array.isArray(result.data)
@@ -139,7 +139,7 @@
 
       departmentsList.sort((a, b) => a.departmentName.localeCompare(b.departmentName));
       const departmentSelect = document.getElementById('department');
-      departmentSelect.innerHTML = '<option value="">Chọn đơn vị</option>';
+      departmentSelect.innerHTML = '<option value="">Select department</option>';
       departmentsList.forEach(dept => {
         const option = document.createElement('option');
         option.value = dept.departmentName;
@@ -148,20 +148,20 @@
       });
 
     } catch (error) {
-      console.error('🚨 Lỗi khi lấy danh sách đơn vị:', error);
-      showError('Không thể tải danh sách đơn vị');
+      console.error('Error fetching departments:', error);
+      showError('Failed to load departments');
     }
   }
 
   async function fetchRoles() {
     try {
       const response = await fetch('/api/v1/roles/all');
-      if (!response.ok) throw new Error('Lỗi khi tải danh sách quyền');
+      if (!response.ok) throw new Error('Error fetching roles');
 
       const result = await response.json();
       const roles = Array.isArray(result.data) ? result.data : [];
       const roleSelect = document.getElementById('role');
-      roleSelect.innerHTML = '<option value="">Chọn quyền</option>';
+      roleSelect.innerHTML = '<option value="">Select role</option>';
       roles.forEach(role => {
         const option = document.createElement('option');
         option.value = role.roleName;
@@ -169,24 +169,23 @@
         roleSelect.appendChild(option);
       });
     } catch (error) {
-      console.error('🚨 Lỗi khi lấy danh sách quyền:', error);
-      showError('Không thể tải danh sách quyền');
+      console.error('Error fetching roles:', error);
+      showError('Failed to load roles');
     }
   }
 
-  // 🔹 Lấy vai trò người dùng
   async function fetchCurrentUserRole() {
     try {
       const response = await fetch('/api/v1/users/getUserRole');
-      if (!response.ok) throw new Error('Lỗi khi tải vai trò người dùng');
+      if (!response.ok) throw new Error('Error fetching user role');
 
       const result = await response.json();
       const userRole = result.data;
-      currentUserRole = userRole; // Gán vào biến toàn cục
+      currentUserRole = userRole;
       renderButtonBasedOnRole(userRole);
     } catch (error) {
-      console.error('🚨 Lỗi khi lấy vai trò người dùng:', error);
-      showError('Không thể tải vai trò người dùng');
+      console.error('Error fetching user role:', error);
+      showError('Failed to load user role');
     }
   }
 
@@ -196,7 +195,6 @@
     addButton.style.display = userRole === 'ADMIN' ? 'block' : 'none';
   }
 
-  // 🔹 Hiển thị danh sách users lên bảng
   function populateTable(users) {
     const tableBody = document.getElementById('accountsTableBody');
     if (!tableBody) return;
@@ -212,7 +210,7 @@
           <td>${user.employeeName || '-'}</td>
           <td>${user.email || '-'}</td>
           <td>${user.roleName || '-'}</td>
-          <td>${user.departmentName || (user.departmentId ? 'Đang cập nhật' : 'Không có')}</td>
+          <td>${user.departmentName || (user.departmentId ? 'Updating...' : 'None')}</td>
           <td>${user.status || '-'}</td>
           <td>
             <button onclick="editAccount('${user.username}')"><i class="fas fa-edit"></i></button>
@@ -232,14 +230,14 @@
 
     try {
       const response = await fetch(`/api/v1/users/getUserByUsername/${username}`);
-      if (!response.ok) throw new Error("Không tìm thấy người dùng");
+      if (!response.ok) throw new Error("User not found");
 
       const data = await response.json();
       populateTable([data]);
 
     } catch (error) {
-      console.error('Lỗi khi tìm kiếm:', error);
-      showError('Không tìm thấy người dùng');
+      console.error('Search error:', error);
+      showError('User not found');
     }
   }
 
@@ -262,39 +260,38 @@
 
   function editAccount(username) {
     if (!username) {
-      showError('Không có username để chỉnh sửa');
+      showError('No username to edit');
       return;
     }
     window.location.href = `/users/update/${encodeURIComponent(username)}`;
   }
 
-  // 🔹 Xóa tài khoản
   async function deleteAccount(username) {
-    if (!confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}" không?`)) return;
+    if (!confirm(`Are you sure you want to delete account "${username}"?`)) return;
 
     try {
       const response = await fetch(`/api/v1/users/${username}`, {
         method: 'DELETE'
       });
 
-      if (!response.ok) throw new Error("Không thể xóa người dùng");
+      if (!response.ok) throw new Error("Unable to delete user");
 
       const result = await response.json();
-      alert(result.message || 'Xóa thành công');
-      await fetchData(); // Refresh lại bảng
+      alert(result.message || 'Deleted successfully');
+      await fetchData();
 
     } catch (error) {
-      console.error("Lỗi khi xóa người dùng:", error);
-      showError("Xóa người dùng thất bại");
+      console.error("Delete error:", error);
+      showError("Failed to delete user");
     }
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
     try {
-      await fetchCurrentUserRole(); // lấy quyền
-      await fetchDepartments();     // đơn vị
-      await fetchRoles();           // quyền
-      await fetchData();            // danh sách user
+      await fetchCurrentUserRole();
+      await fetchDepartments();
+      await fetchRoles();
+      await fetchData();
 
       document.getElementById('department')?.addEventListener('change', filterData);
       document.getElementById('role')?.addEventListener('change', filterData);
@@ -303,8 +300,8 @@
       });
 
     } catch (error) {
-      console.error('Lỗi khi khởi tạo:', error);
-      showError('Khởi tạo ứng dụng thất bại');
+      console.error('Initialization error:', error);
+      showError('App initialization failed');
     }
   });
 </script>
