@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thêm mới tài khoản</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .input-group {
+      display: flex;
+    }
+    .input-group input {
+      flex: 1;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .input-group button {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+    button {
+      padding: 8px 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #007bff;
+      color: #fff;
+      border-color: #007bff;
+    }
+    .btn-primary:hover {
+      background: #0056b3;
+      border-color: #0056b3;
+    }
+    .btn-secondary {
+      background: #6c757d;
+      color: #fff;
+      border-color: #6c757d;
+    }
+    .btn-secondary:hover {
+      background: #5a6268;
+      border-color: #545b62;
+    }
+    .text-success {
+      color: #28a745;
+    }
+    .text-danger {
+      color: #dc3545;
+    }
+    .form-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    .message {
+      font-size: 0.875em;
+      margin-top: 5px;
+    }
+    .error-message {
+      color: #dc3545;
+      background-color: #f8d7da;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Thêm mới tài khoản</h2>
+  <div id="errorAlert" class="error-message"></div>
+  <form id="createAccountForm">
+    <div class="form-group">
+      <label for="username">Username:</label>
+      <div class="input-group">
+        <input id="username" type="text" placeholder="Nhập username" required>
+        <button type="button" onclick="checkUsername()" class="btn-primary">Kiểm tra</button>
+      </div>
+      <span id="usernameMessage" class="message"></span>
+    </div>
+
+    <div class="form-group">
+      <label for="employeeName">Tên nhân viên:</label>
+      <input id="employeeName" type="text" placeholder="Nhập tên nhân viên" required>
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email:</label>
+      <input id="email" type="email" placeholder="Nhập email" readonly>
+    </div>
+
+    <div class="form-group">
+      <label for="department">Đơn vị:</label>
+      <select id="department" required>
+        <option value="">Chọn đơn vị</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="role">Quyền:</label>
+      <select id="role" required>
+        <option value="">Chọn quyền</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Mật khẩu:</label>
+      <input id="password" type="password" placeholder="Nhập mật khẩu" minlength="6" required>
+      <small class="message">(Tối thiểu 6 ký tự)</small>
+    </div>
+
+    <div class="form-group">
+      <label>
+        <input type="checkbox" id="status" checked> Tài khoản hoạt động
+      </label>
+    </div>
+
+    <div class="form-footer">
+      <button type="button" onclick="window.location.href='/users'" class="btn-secondary">
+        <i class="fas fa-times"></i> Hủy
+      </button>
+      <button type="submit" class="btn-primary">
+        <i class="fas fa-save"></i> Lưu
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  let isUsernameAvailable = false;
+  let departmentsList = []; // Lưu danh sách đơn vị để tái sử dụng
+
+  // 🔹 Lấy danh sách đơn vị từ API
+  async function fetchDepartments() {
+    try {
+      const response = await fetch('/api/v1/departments');
+      const result = await response.json();
+
+      // Lọc các đơn vị trùng lặp bằng cách sử dụng Set
+      departmentsList = Array.isArray(result.data)
+              ? [...new Map(result.data.map(item =>
+                      [item.departmentName, item])).values()]
+              : [];
+
+      // Sắp xếp các đơn vị theo thứ tự A-Z
+      departmentsList.sort((a, b) =>
+              a.departmentName.localeCompare(b.departmentName)
+      );
+
+      const departmentSelect = document.getElementById('department');
+      departmentSelect.innerHTML = '<option value="">Chọn đơn vị</option>';
+
+      // Thêm các đơn vị đã lọc vào dropdown
+      departmentsList.forEach(dept => {
+        const option = document.createElement('option');
+        option.value = dept.departmentName;
+        option.textContent = dept.departmentName;
+        departmentSelect.appendChild(option);
+      });
+
+    } catch (error) {
+      console.error('🚨 Lỗi khi lấy danh sách đơn vị:', error);
+      showError('Không thể tải danh sách đơn vị. Vui lòng thử lại sau.');
+    }
+  }
+
+  // 🔹 Lấy danh sách quyền từ API
+  async function fetchRoles() {
+    try {
+      const response = await fetch('/api/v1/roles/all');
+      const result = await response.json();
+      const roles = Array.isArray(result.data) ? result.data : [];
+
+      const roleSelect = document.getElementById('role');
+      roleSelect.innerHTML = '<option value="">Chọn quyền</option>';
+      roles.forEach(role => {
+        const option = document.createElement('option');
+        option.value = role.roleName;
+        option.textContent = role.roleName;
+        roleSelect.appendChild(option);
+      });
+
+    } catch (error) {
+      console.error('🚨 Lỗi khi lấy danh sách quyền:', error);
+      showError('Không thể tải danh sách quyền. Vui lòng thử lại sau.');
+    }
+  }
+
+  // 🔹 Kiểm tra username có sẵn không
+  async function checkUsername() {
+    const username = document.getElementById('username').value.trim();
+    const messageSpan = document.getElementById('usernameMessage');
+    messageSpan.textContent = '';
+
+    if (!username) {
+      messageSpan.textContent = 'Vui lòng nhập username';
+      messageSpan.className = 'message text-danger';
+      isUsernameAvailable = false;
+      return;
+    }
+
+    // Kiểm tra định dạng username
+    if (!/^[a-z0-9_]+$/i.test(username)) {
+      messageSpan.textContent = 'Username chỉ được chứa chữ cái, số và dấu gạch dưới';
+      messageSpan.className = 'message text-danger';
+      isUsernameAvailable = false;
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/v1/users/check?username=${username}`);
+
+      if (!response.ok) {
+        throw new Error('Lỗi kết nối máy chủ');
+      }
+
+      const result = await response.json();
+
+      if (result.status === 'Success') {
+        messageSpan.textContent = 'Username khả dụng';
+        messageSpan.className = 'message text-success';
+        isUsernameAvailable = true;
+        updateEmail();
+      } else {
+        messageSpan.textContent = result.message || 'Username không khả dụng';
+        messageSpan.className = 'message text-danger';
+        isUsernameAvailable = false;
+      }
+    } catch (error) {
+      messageSpan.textContent = 'Có lỗi xảy ra khi kiểm tra username';
+      messageSpan.className = 'message text-danger';
+      isUsernameAvailable = false;
+      console.error('🚨 Lỗi khi kiểm tra username:', error);
+    }
+  }
+
+  // 🔹 Hiển thị thông báo lỗi
+  function showError(message) {
+    const errorAlert = document.getElementById('errorAlert');
+    errorAlert.textContent = message;
+    errorAlert.style.display = 'block';
+    setTimeout(() => errorAlert.style.display = 'none', 5000);
+  }
+
+  // 🔹 Lấy departmentId từ departmentName
+  function getDepartmentId(departmentName) {
+    if (!departmentName) return null;
+    const department = departmentsList.find(d => d.departmentName === departmentName);
+    return department ? department.departmentId : null;
+  }
+
+  // 🔹 Cập nhật email tự động
+  function updateEmail() {
+    const username = document.getElementById('username').value.trim();
+    const emailField = document.getElementById('email');
+
+    if (username) {
+      emailField.value = `${username}@cmcglobal.com.vn`;
+    } else {
+      emailField.value = '';
+    }
+  }
+
+  // 🔹 Tạo tài khoản mới
+  async function createAccount(event) {
+    event.preventDefault();
+    const errorAlert = document.getElementById('errorAlert');
+    errorAlert.style.display = 'none';
+
+    // Kiểm tra username
+    if (!isUsernameAvailable) {
+      showError('Vui lòng kiểm tra và xác nhận username khả dụng trước khi tạo tài khoản');
+      return;
+    }
+
+    // Kiểm tra mật khẩu
+    const password = document.getElementById('password').value;
+    if (password.length < 6) {
+      showError('Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    // Thu thập dữ liệu form
+    const accountData = {
+      username: document.getElementById('username').value.trim(),
+      employeeName: document.getElementById('employeeName').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      departmentName: document.getElementById('department').value,
+      departmentId: getDepartmentId(document.getElementById('department').value),
+      roleName: document.getElementById('role').value,
+      password: password,
+      status: document.getElementById('status').checked ? 'Active' : 'Inactive'
+    };
+
+    // Kiểm tra các trường bắt buộc
+    if (!accountData.departmentName || !accountData.roleName) {
+      showError('Vui lòng chọn đơn vị và quyền');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/v1/users/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(accountData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Không thể tạo tài khoản');
+      }
+
+      if (result.status === 'Success') {
+        alert('Tạo tài khoản thành công!');
+        window.location.href = '/users?refresh=' + new Date().getTime();
+      } else {
+        showError(result.message || 'Có lỗi xảy ra khi tạo tài khoản');
+      }
+    } catch (error) {
+      console.error('🚨 Lỗi khi tạo tài khoản:', error);
+      showError(error.message || 'Có lỗi xảy ra khi tạo tài khoản');
+    }
+  }
+
+  // 🔹 Khởi tạo khi trang được tải
+  document.addEventListener('DOMContentLoaded', () => {
+    fetchDepartments();
+    fetchRoles();
+
+    // Thêm sự kiện input cho username để tự động cập nhật email
+    document.getElementById('username').addEventListener('input', updateEmail);
+
+    // Thêm sự kiện submit cho form
+    document.getElementById('createAccountForm').addEventListener('submit', createAccount);
+  });
+</script>
+</body>
+</html>

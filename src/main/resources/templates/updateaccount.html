@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cập nhật tài khoản</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    /* CSS thay thế cho common.css */
+    .readonly-input {
+      background-color: #f0f0f0;
+      cursor: not-allowed;
+    }
+    .account-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="card shadow">
+    <div class="card-header bg-primary text-white">
+      <h2 class="mb-0"><i class="fas fa-user-edit me-2"></i>Cập nhật tài khoản</h2>
+    </div>
+
+    <div class="card-body">
+      <form id="updateForm">
+        <div class="mb-3">
+          <label for="username" class="form-label">Username:</label>
+          <input type="text" id="username" class="form-control readonly-input" readonly>
+        </div>
+
+        <div class="mb-3">
+          <label for="employeeName" class="form-label">Tên nhân viên:</label>
+          <input type="text" id="employeeName" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label for="email" class="form-label">Email:</label>
+          <input type="email" id="email" class="form-control readonly-input" readonly>
+        </div>
+
+        <div class="mb-3">
+          <label for="department" class="form-label">Đơn vị:</label>
+          <select id="department" class="form-select"></select>
+        </div>
+
+        <div class="mb-3">
+          <label for="role" class="form-label">Quyền:</label>
+          <select id="role" class="form-select"></select>
+        </div>
+
+        <div class="mb-3 form-check">
+          <div class="account-status">
+            <input type="checkbox" id="active" class="form-check-input">
+            <label class="form-check-label" for="active">Tài khoản hoạt động</label>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <button type="button" id="saveBtn" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>Lưu
+          </button>
+          <button type="button" id="resetBtn" class="btn btn-warning">
+            <i class="fas fa-key me-2"></i>Đặt lại mật khẩu
+          </button>
+          <button type="button" onclick="window.location.href='/users'" class="btn btn-danger">
+            <i class="fas fa-times me-2"></i>Hủy
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal đặt lại mật khẩu -->
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="fas fa-key me-2"></i>Đặt lại mật khẩu</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Nhập mật khẩu mới cho tài khoản:</p>
+        <input type="password" id="newPassword" class="form-control" placeholder="Mật khẩu mới">
+        <div class="mt-2 text-muted small">
+          <i class="fas fa-info-circle me-1"></i>Mật khẩu phải có ít nhất 10 ký tự, bao gồm chữ hoa, chữ thường và ký tự đặc biệt
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Hủy
+        </button>
+        <button type="button" id="confirmResetBtn" class="btn btn-primary">
+          <i class="fas fa-check me-1"></i>Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS Bundle với Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  const urlParts = window.location.pathname.split('/');
+  const username = urlParts[urlParts.length - 1];
+  let currentUserData = null;
+  let passwordModal = null;
+  let currentUserRole = 'UNKNOWN';
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    passwordModal = new bootstrap.Modal(document.getElementById('passwordModal'));
+
+    try {
+      const roleResponse = await fetch('/api/v1/users/getUserRole');
+      if (roleResponse.ok) {
+        const roleResult = await roleResponse.json();
+        currentUserRole = roleResult.data || 'UNKNOWN';
+      }
+    } catch (e) {
+      console.warn('Không thể lấy vai trò người dùng');
+    }
+
+    console.log("Current user role:", currentUserRole);
+
+    await fetchUserData();
+    await fetchDepartments(currentUserRole);
+    await fetchRoles(currentUserRole);
+
+    document.getElementById('saveBtn').addEventListener('click', updateUser);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('newPassword').value = '';
+      passwordModal.show();
+    });
+    document.getElementById('confirmResetBtn').addEventListener('click', resetPassword);
+
+    // Disable fields based on role// Disable fields based on role
+    if (currentUserRole === 'ADMIN') {
+      // Admin không thể sửa username, email, role
+      document.getElementById('username').readOnly = true;
+      document.getElementById('email').readOnly = true;
+      document.getElementById('role').disabled = true;
+
+      document.getElementById('username').title = 'Admins cannot edit username';
+      document.getElementById('email').title = 'Admins cannot edit email';
+      document.getElementById('role').title = 'Admins cannot modify roles';
+
+    } else if (currentUserRole === 'SUPERVISOR') {
+      // Supervisor không thể sửa username, email, department
+      document.getElementById('username').readOnly = true;
+      document.getElementById('email').readOnly = true;
+      document.getElementById('department').disabled = true;
+
+      document.getElementById('username').title = 'Supervisors cannot edit username';
+      document.getElementById('email').title = 'Supervisors cannot edit email';
+      document.getElementById('department').title = 'Supervisors cannot change department';
+    }
+
+  });
+
+  async function fetchUserData() {
+    try {
+      const response = await fetch(`/api/v1/users/getUserByUsername/${username}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      if (result) {
+        currentUserData = result;
+        populateUserForm(result);
+      } else {
+        console.error('No user data found');
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      showAlert('danger', 'Failed to fetch user information');
+    }
+  }
+
+  function populateUserForm(user) {
+    document.getElementById('username').value = user.username || '';
+    document.getElementById('employeeName').value = user.employeeName || 'Unknown';
+    document.getElementById('email').value = user.email || '';
+    document.getElementById('active').checked = user.status === 'Active';
+
+    setTimeout(() => {
+      if (user.roleName) document.getElementById('role').value = user.roleName;
+      if (user.departmentId) document.getElementById('department').value = user.departmentId;
+    }, 200);
+  }
+
+  async function fetchDepartments(currentUserRole) {
+    try {
+      const response = await fetch('/api/v1/departments');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      let departments = Array.isArray(result.data) ? result.data : result.retMsg || result || [];
+
+      if (typeof departments === 'string') {
+        const matches = departments.match(/Department\(departmentId=(\d+), departmentName=([^,]+)/g);
+        departments = matches.map(dept => {
+          const parts = dept.match(/departmentId=(\d+), departmentName=([^,]+)/);
+          return {
+            departmentId: parts[1],
+            departmentName: parts[2].trim()
+          };
+        });
+      }
+
+      const uniqueDepartments = departments.filter((dept, index, self) =>
+              index === self.findIndex(d => (d.departmentName || d.name).toLowerCase() === (dept.departmentName || dept.name).toLowerCase())
+      );
+
+      uniqueDepartments.sort((a, b) =>
+              (a.departmentName || a.name || '').localeCompare(b.departmentName || b.name || '')
+      );
+
+      const departmentSelect = document.getElementById('department');
+      if (!departmentSelect) return;
+      departmentSelect.innerHTML = '<option value="">Select department</option>';
+      uniqueDepartments.forEach(dept => {
+        const option = document.createElement('option');
+        option.value = dept.departmentId || dept.id;
+        option.textContent = dept.departmentName || dept.name || 'Unknown';
+        departmentSelect.appendChild(option);
+      });
+
+      if (currentUserData?.departmentId) {
+        departmentSelect.value = currentUserData.departmentId;
+      }
+
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      showAlert('danger', 'Failed to load departments. Please try again later.');
+    }
+  }
+
+  async function fetchRoles(currentUserRole) {
+    try {
+      const response = await fetch('/api/v1/roles/all');
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      let roles = Array.isArray(result.data) ? result.data : result.retMsg || result || [];
+
+      if (typeof roles === 'string') {
+        const matches = roles.match(/Role\(roleName=([^\)]+)/g);
+        roles = matches.map(role => {
+          const roleName = role.match(/roleName=([^\)]+)/)[1];
+          return { roleName };
+        });
+      }
+
+      const roleSelect = document.getElementById('role');
+      if (!roleSelect) return;
+      roleSelect.innerHTML = '<option value="">Select role</option>';
+      roles.forEach(role => {
+        if (currentUserRole === 'SUPERVISOR' && role.roleName === 'ADMIN') return;
+        const option = document.createElement('option');
+        option.value = role.roleName || role.name;
+        option.textContent = role.roleName || role.name || 'Unknown';
+        roleSelect.appendChild(option);
+      });
+
+      if (currentUserData?.roleName) {
+        roleSelect.value = currentUserData.roleName;
+      }
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+    }
+  }
+
+  async function updateUser() {
+    const userData = {
+      username: document.getElementById('username').value,
+      employeeName: document.getElementById('employeeName').value,
+      email: document.getElementById('email').value,
+      departmentId: document.getElementById('department').value,
+      roleName: document.getElementById('role').value,
+      status: document.getElementById('active').checked ? 'Active' : 'Inactive'
+    };
+    try {
+      const response = await fetch(`/api/v1/users/update/${username}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+      const result = await response.json();
+      showAlert('success', result.message || 'Update successful');
+      setTimeout(() => window.location.href = '/users', 1500);
+    } catch (error) {
+      console.error('Error updating account:', error);
+      showAlert('danger', 'An error occurred while updating');
+    }
+  }
+
+  async function resetPassword() {
+    const newPassword = document.getElementById('newPassword').value;
+    if (!isValidPassword(newPassword)) {
+      showAlert('warning', 'Password must be at least 10 characters long, including uppercase, lowercase, and special characters');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/v1/users/change-password/${username}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword })
+      });
+      const result = await response.json();
+      if (result.status === 'Success') {
+        showAlert('success', 'Password reset successful');
+        passwordModal.hide();
+      } else {
+        showAlert('danger', result.message || 'An error occurred');
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      showAlert('danger', 'An error occurred while resetting password');
+    }
+  }
+
+  function isValidPassword(password) {
+    return password.length >= 10 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[^a-zA-Z0-9]/.test(password);
+  }
+
+  function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+    alertDiv.role = 'alert';
+    alertDiv.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    const container = document.querySelector('.container');
+    container.prepend(alertDiv);
+    setTimeout(() => {
+      const bsAlert = new bootstrap.Alert(alertDiv);
+      bsAlert.close();
+    }, 5000);
+  }
+</script>
+
+</body>
+</html>

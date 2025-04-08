@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Department List</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0-alpha1/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script> <!-- Icon -->
+</head>
+<body>
+<div class="container mt-5">
+    <h1>Department List</h1>
+
+    <button th:if="${isAdminOrSupervisor}" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#departmentModal" onclick="clearForm()">Add Department</button>
+
+    <table class="table table-bordered">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Department Name</th>
+            <th th:if="${isAdminOrSupervisor}">Employee Name</th>
+            <th th:if="${isAdminOrSupervisor}">Role Name</th>
+            <th th:if="${isAdminOrSupervisor}">Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="department : ${departments}">
+            <td th:text="${department.departmentId}"></td>
+            <td th:text="${department.departmentName}"></td>
+            <td th:if="${isAdminOrSupervisor}" th:text="${department.employeeName != null ? department.employeeName : ''}"></td>
+            <td th:if="${isAdminOrSupervisor}" th:text="${department.roleName != null ? department.roleName : ''}"></td>
+            <td th:if="${isAdminOrSupervisor}">
+                <button class="btn btn-primary btn-sm" th:onclick="'openEditForm(' + ${department.departmentId} + ')'" data-bs-toggle="modal" data-bs-target="#departmentModal">Edit</button>
+                <button class="btn btn-danger btn-sm" th:onclick="'openDeletePopup(' + ${department.departmentId} + ')'" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</button>
+            </td>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal for Add/Edit Department -->
+<div class="modal fade" id="departmentModal" tabindex="-1" aria-labelledby="departmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="departmentModalLabel">Department Form</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Form for adding/editing department -->
+                <form id="departmentForm" onsubmit="event.preventDefault(); updateDepartment();">
+                    <input type="hidden" id="editDepartmentId" name="departmentId">
+                    <div class="mb-3">
+                        <label for="departmentName" class="form-label">Department Name</label>
+                        <input type="text" class="form-control" id="departmentName" name="departmentName" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="saveButton">Save</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Delete Confirmation -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Delete Department</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this department?</p>
+                <form id="deleteForm" onsubmit="event.preventDefault(); deleteDepartment();">
+                    <input type="hidden" id="deleteDepartmentId">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0-alpha1/js/bootstrap.bundle.min.js"></script>
+
+<script th:inline="javascript">
+    var departments = /*[[${departments}]]*/ [];
+
+    // Open Edit Form with department details
+    function openEditForm(departmentId) {
+        const department = departments.find(dep => dep.departmentId === departmentId);
+
+        // Pre-fill the form with current department data
+        document.getElementById("departmentName").value = department.departmentName;
+        document.getElementById("editDepartmentId").value = department.departmentId; // Set departmentId in hidden field
+    }
+
+    // Save or update the department
+    function updateDepartment() {
+        const departmentId = document.getElementById("editDepartmentId").value;
+        const departmentName = document.getElementById("departmentName").value;
+
+        if (!departmentName) {
+            alert("Department name is required!");
+            return;
+        }
+
+        const data = { departmentName: departmentName };
+
+        if (departmentId) {
+            // PUT request to update department
+            fetch('/api/v1/departments/' + departmentId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Department updated successfully");
+                        location.reload(); // Reload to reflect the changes
+                    } else {
+                        alert("Error updating department");
+                    }
+                });
+        } else {
+            // POST request to create new department
+            fetch('/api/v1/departments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Department added successfully");
+                        location.reload();
+                    } else {
+                        alert("Error adding department");
+                    }
+                });
+        }
+    }
+
+    // Delete the department
+    function openDeletePopup(departmentId) {
+        document.getElementById("deleteDepartmentId").value = departmentId;
+    }
+
+    function deleteDepartment() {
+        const departmentId = document.getElementById("deleteDepartmentId").value;
+
+        fetch('/api/v1/departments/' + departmentId, {
+            method: 'DELETE',
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert("Department deleted successfully");
+                    location.reload();
+                } else {
+                    alert("Error deleting department");
+                }
+            });
+    }
+</script>
+
+
+</body>
+</html>
